@@ -19,6 +19,7 @@ export interface ChatMessage {
 
 export interface FinancialProfileResponse {
   profile: FinancialProfile;
-  description: string;
+  explanation: string;
   recommendations: string[];
+  reasoning: string;
 } 

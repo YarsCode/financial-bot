@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getProfilesForOpenAI } from '@/lib/docx-utils';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -17,7 +18,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid answers' }, { status: 400 });
     }
 
-    const prompt = `Based on the following financial questionnaire answers, generate a personalized financial profile in Hebrew. The profile should be one of: "תכנן", "המהמר", "המאוזן", or "המחושב". Include a description and 2-3 specific recommendations.\n\nAnswers:\n${answers.map((a: { questionId: number, answer: string }) => `Question ${a.questionId}: ${a.answer}`).join('\n')}\n\nFormat the response as a JSON object with the following structure:\n{\n  "profile": "PROFILE_TYPE",\n  "description": "DESCRIPTION_IN_HEBREW",\n  "recommendations": ["RECOMMENDATION1", "RECOMMENDATION2", "RECOMMENDATION3"]\n}\n\nImportant: Return ONLY the JSON object, no markdown formatting or additional text.`;
+    // Get the financial profiles content from DOCX files
+    const profilesContent = await getProfilesForOpenAI();
+
+    const prompt = `אתה מומחה פיננסי שמנתח תשובות לשאלון פיננסי ומתאים אותן לאחד מארבעה פרופילים פיננסיים.
+
+הנה הפרופילים הפיננסיים האפשריים:
+${profilesContent}
+
+הנה התשובות של המשתמש לשאלון:
+${answers.map((a: { questionId: number, answer: string }) => `שאלה ${a.questionId}: ${a.answer}`).join('\n')}
+
+בבקשה:
+1. ניתוח את התשובות של המשתמש
+2. התאם את המשתמש לאחד מארבעת הפרופילים הפיננסיים (תכנן, המהמר, המאוזן, המחושב)
+3. הסבר למה הפרופיל הזה מתאים למשתמש, בהתבסס על התשובות שלו
+4. תן 2-3 המלצות ספציפיות למשתמש, בהתבסס על הפרופיל שנבחר
+
+החזר את התשובה בפורמט JSON הבא:
+{
+  "profile": "שם הפרופיל",
+  "explanation": "הסבר מפורט למה הפרופיל מתאים למשתמש",
+  "recommendations": ["המלצה 1", "המלצה 2", "המלצה 3"],
+  "reasoning": "ניתוח מפורט של התשובותאמתן לפרופיל"
+}
+
+חשוב: החזר רק את אובייקט ה-JSON, ללא טקסט נוסף או פורמט markdown.`;
 
     const completion = await openai.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],

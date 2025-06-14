@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ProgressBar } from '@/components/chat/ProgressBar';
@@ -17,6 +17,27 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [showEmailInput, setShowEmailInput] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<{ focus: () => void }>(null);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      const scrollOptions = {
+        behavior: 'smooth' as ScrollBehavior,
+        block: 'end' as ScrollLogicalPosition,
+      };
+      messagesEndRef.current.scrollIntoView(scrollOptions);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    // Focus input after bot messages, but only if we're not showing options
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.type === 'bot' && !QUESTIONS[currentQuestion]?.options) {
+      chatInputRef.current?.focus();
+    }
+  }, [messages, currentQuestion]);
 
   const handleAnswer = async (answer: string) => {
     setIsLoading(true);
@@ -25,7 +46,13 @@ export default function Home() {
 
     if (currentQuestion < QUESTIONS.length - 1) {
       setCurrentQuestion(prev => prev + 1);
-      setMessages(prev => [...prev, { type: 'bot', content: QUESTIONS[currentQuestion + 1].text }]);
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          { type: 'bot', content: QUESTIONS[currentQuestion + 1].text }
+        ]);
+        setIsLoading(false);
+      }, 1000);
     } else {
       try {
         const res = await fetch('/api/financial-profile', {
@@ -42,7 +69,10 @@ export default function Home() {
           ...(profile.recommendations || []).map((rec: string) => ({ type: 'bot' as const, content: `• ${rec}` })),
           { type: 'bot' as const, content: 'אנא הזן את כתובת המייל שלך כדי שנציג שלנו יוכל ליצור איתך קשר:' }
         ];
-        setMessages(prev => [...prev, ...newMessages]);
+        setMessages(prev => [
+          ...prev,
+          ...newMessages.filter(msg => msg.content && msg.content.trim() !== '')
+        ]);
         setShowEmailInput(true);
       } catch {
         setMessages(prev => [...prev, { 
@@ -50,8 +80,8 @@ export default function Home() {
           content: 'מצטערים, אירעה שגיאה. אנא נסו שוב מאוחר יותר.' 
         }]);
       }
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -69,16 +99,22 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-between p-4 md:p-24">
       <div className="w-full max-w-2xl">
         <ProgressBar current={currentQuestion + 1} total={QUESTIONS.length} />
-        <div className="mt-4 space-y-4">
+        <div
+          className="mt-4 space-y-4 overflow-y-auto scroll-smooth-fast"
+          style={{ maxHeight: 400 }}
+          ref={chatContainerRef}
+        >
           {messages.map((message, index) => (
             <ChatMessage
               key={index}
               message={message}
             />
           ))}
+          <div ref={messagesEndRef} />
         </div>
         {!showEmailInput ? (
           <ChatInput
+            ref={chatInputRef}
             onSend={handleAnswer}
             isLoading={isLoading}
             options={QUESTIONS[currentQuestion].options}

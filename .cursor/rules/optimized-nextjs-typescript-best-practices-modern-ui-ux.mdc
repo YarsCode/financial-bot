@@ -86,3 +86,4 @@ You are an expert full-stack developer proficient in TypeScript, React, Next.js,
 - Enable strict TypeScript rules with `@typescript-eslint/strict` to improve type safety and reduce bugs.
 - If integrating with a CRM, encrypt emails and transmit data over HTTPS.
 - Use secure backend logic or automation tools (e.g., n8n, Zapier, or CRM APIs) to notify financial planners.
+- Never change the openAI model unless asked specifically to do that. The default should currently be gpt-4o.

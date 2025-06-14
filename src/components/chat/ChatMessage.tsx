@@ -22,7 +22,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             : 'bg-muted'
         )}
       >
-        <p className="text-sm md:text-base">{message.content}</p>
+        <p className="text-sm md:text-base text-right" dir="rtl">{message.content}</p>
       </Card>
     </div>
   );
