@@ -26,7 +26,7 @@ A Hebrew-language conversational AI bot for financial questionnaires, built with
    ```
 3. Create a `.env.local` file in the root directory with your OpenAI API key:
    ```
-   NEXT_PUBLIC_OPENAI_API_KEY=your_api_key_here
+   OPENAI_API_KEY=your_api_key_here
    ```
 4. Run the development server:
    ```bash
@@ -34,12 +34,45 @@ A Hebrew-language conversational AI bot for financial questionnaires, built with
    ```
 5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
+## Deployment
+
+### Deploy to Vercel (Recommended)
+
+This project is optimized for Vercel deployment. Follow these steps:
+
+1. **Push to GitHub**: Make sure your code is pushed to a GitHub repository
+
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Sign up/Login with your GitHub account
+   - Click "New Project"
+   - Import your GitHub repository
+
+3. **Configure Environment Variables**:
+   - In your Vercel project settings, go to "Environment Variables"
+   - Add the following variables:
+     - `OPENAI_API_KEY`: Your OpenAI API key
+     - `NEXT_PUBLIC_APP_URL`: Your Vercel app URL (e.g., `https://your-app.vercel.app`)
+
+4. **Deploy**:
+   - Vercel will automatically detect Next.js and deploy your app
+   - Your app will be available at `https://your-app-name.vercel.app`
+
+### Alternative Deployment Options
+
+- **Netlify**: Supports Next.js but with some limitations for API routes
+- **Railway**: Good for full-stack applications
+- **DigitalOcean App Platform**: Enterprise-grade deployment
+
 ## Project Structure
 
 ```
 financial-bot/
 ├── src/
 │   ├── app/
+│   │   ├── api/
+│   │   │   ├── financial-profile/
+│   │   │   └── questions/
 │   │   ├── layout.tsx
 │   │   ├── page.tsx
 │   │   └── globals.css
@@ -49,28 +82,40 @@ financial-bot/
 │   │   │   ├── ChatInput.tsx
 │   │   │   └── ProgressBar.tsx
 │   │   └── ui/
-│   │       └── button.tsx
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── input.tsx
+│   │       └── progress.tsx
 │   ├── lib/
 │   │   ├── types.ts
 │   │   ├── constants.ts
-│   │   └── utils.ts
-│   └── services/
-│       ├── openai.ts
-│       └── sheets.ts
+│   │   ├── utils.ts
+│   │   ├── docx-utils.ts
+│   │   └── profile-constants.ts
+│   ├── services/
+│   │   └── openai.ts
+│   ├── hooks/
+│   │   └── useChat.ts
+│   └── data/
+│       ├── plans/
+│       ├── profiles/
+│       └── questions/
 └── public/
-    └── locales/
-        └── he.json
+    └── (various SVG assets)
 ```
 
 ## Technologies Used
 
-- Next.js 14
+- Next.js 15
 - TypeScript
 - Tailwind CSS
 - Radix UI
 - OpenAI API
-- React Query
+- React Query (TanStack Query)
 - Zustand
+- Framer Motion
+- React Hook Form
+- Zod
 
 ## Contributing
 
