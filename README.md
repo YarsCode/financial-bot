@@ -50,9 +50,8 @@ This project is optimized for Vercel deployment. Follow these steps:
 
 3. **Configure Environment Variables**:
    - In your Vercel project settings, go to "Environment Variables"
-   - Add the following variables:
+   - Add the following variable:
      - `OPENAI_API_KEY`: Your OpenAI API key
-     - `NEXT_PUBLIC_APP_URL`: Your Vercel app URL (e.g., `https://your-app.vercel.app`)
 
 4. **Deploy**:
    - Vercel will automatically detect Next.js and deploy your app
