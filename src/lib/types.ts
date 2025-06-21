@@ -1,7 +1,7 @@
 export interface Question {
   id: number;
   text: string;
-  type: 'text' | 'multiple';
+  type: 'text' | 'number' | 'multiple';
   options?: string[];
 }
 
@@ -10,7 +10,7 @@ export interface Answer {
   answer: string;
 }
 
-export type FinancialProfile = 'תכנן' | 'המהמר' | 'המאוזן' | 'המחושב';
+export type FinancialProfile = 'המתכנן' | 'המהמר' | 'המאוזן' | 'המחושב';
 
 export interface ChatMessage {
   type: 'user' | 'bot';

@@ -1,67 +1,88 @@
 import { Question, FinancialProfile } from './types';
 
-export const QUESTIONS: Question[] = [
-  {
-    id: 1,
-    text: 'כמה כסף צברת?',
-    type: 'text'
-  },
-  {
-    id: 2,
-    text: 'כמה אתה חוסך כל חודש?',
-    type: 'text'
-  },
-  {
-    id: 3,
-    text: 'מהי מטרת השקעה?',
-    type: 'multiple',
-    options: ['דירה', 'פרישה מוקדמת', 'חיסכון', 'אחר']
-  },
-  {
-    id: 4,
-    text: 'מהי רמת הסיכון שאתה מוכן לקחת?',
-    type: 'multiple',
-    options: ['נמוכה', 'בינונית', 'גבוהה', 'גבוהה מאוד']
-  },
-  {
-    id: 5,
-    text: 'מהו אופק ההשקעה שלך?',
-    type: 'multiple',
-    options: ['קצר טווח (עד שנה)', 'בינוני (1-5 שנים)', 'ארוך טווח (מעל 5 שנים)']
-  },
-  {
-    id: 6,
-    text: 'האם יש לך חובות?',
-    type: 'multiple',
-    options: ['כן', 'לא']
-  },
-  {
-    id: 7,
-    text: 'מהי רמת ההכנסה החודשית שלך?',
-    type: 'text'
-  },
-  {
-    id: 8,
-    text: 'האם יש לך ביטוח חיים?',
-    type: 'multiple',
-    options: ['כן', 'לא']
-  },
-  {
-    id: 9,
-    text: 'מהי רמת הידע שלך בשוק ההון?',
-    type: 'multiple',
-    options: ['מתחיל', 'בינוני', 'מתקדם']
-  },
-  {
-    id: 10,
-    text: 'מהי המטרה הפיננסית העיקרית שלך?',
-    type: 'multiple',
-    options: ['ביטחון פיננסי', 'צבירת הון', 'הכנסה פסיבית', 'אחר']
+// This will be populated dynamically from the API
+export let QUESTIONS: Question[] = [];
+
+// Initialize questions from API
+export async function initializeQuestions(): Promise<void> {
+  try {
+    const response = await fetch('/api/questions');
+    if (!response.ok) {
+      throw new Error('Failed to fetch questions');
+    }
+    const data = await response.json();
+    QUESTIONS = data.questions;
+  } catch (error) {
+    console.error('Failed to load questions from API, using defaults:', error);
+    // Fallback to default questions if API call fails
+    QUESTIONS = getDefaultQuestions();
   }
-];
+}
+
+function getDefaultQuestions(): Question[] {
+  return [
+    {
+      id: 1,
+      text: 'כמה כסף צברת?',
+      type: 'text'
+    },
+    {
+      id: 2,
+      text: 'כמה אתה חוסך כל חודש?',
+      type: 'text'
+    },
+    {
+      id: 3,
+      text: 'מהי מטרת השקעה?',
+      type: 'multiple',
+      options: ['דירה', 'פרישה מוקדמת', 'חיסכון', 'אחר']
+    },
+    {
+      id: 4,
+      text: 'מהי רמת הסיכון שאתה מוכן לקחת?',
+      type: 'multiple',
+      options: ['נמוכה', 'בינונית', 'גבוהה', 'גבוהה מאוד']
+    },
+    {
+      id: 5,
+      text: 'מהו אופק ההשקעה שלך?',
+      type: 'multiple',
+      options: ['קצר טווח (עד שנה)', 'בינוני (1-5 שנים)', 'ארוך טווח (מעל 5 שנים)']
+    },
+    {
+      id: 6,
+      text: 'האם יש לך חובות?',
+      type: 'multiple',
+      options: ['כן', 'לא']
+    },
+    {
+      id: 7,
+      text: 'מהי רמת ההכנסה החודשית שלך?',
+      type: 'text'
+    },
+    {
+      id: 8,
+      text: 'האם יש לך ביטוח חיים?',
+      type: 'multiple',
+      options: ['כן', 'לא']
+    },
+    {
+      id: 9,
+      text: 'מהי רמת הידע שלך בשוק ההון?',
+      type: 'multiple',
+      options: ['מתחיל', 'בינוני', 'מתקדם']
+    },
+    {
+      id: 10,
+      text: 'מהי המטרה הפיננסית העיקרית שלך?',
+      type: 'multiple',
+      options: ['ביטחון פיננסי', 'צבירת הון', 'הכנסה פסיבית', 'אחר']
+    }
+  ];
+}
 
 export const FINANCIAL_PROFILES: Record<FinancialProfile, string> = {
-  'תכנן': 'אתה מתכנן פיננסי זהיר ומחושב, המעדיף ביטחון ויציבות.',
+  'המתכנן': 'אתה מתכנן פיננסי זהיר ומחושב, המעדיף ביטחון ויציבות.',
   'המהמר': 'אתה משקיע אמיץ, מוכן לקחת סיכונים משמעותיים להשגת תשואות גבוהות.',
   'המאוזן': 'אתה משקיע מאוזן, המשלב בין סיכון לתשואה בצורה חכמה.',
   'המחושב': 'אתה משקיע מחושב, המשלב בין תכנון קפדני לנטילת סיכונים מבוקרת.'
