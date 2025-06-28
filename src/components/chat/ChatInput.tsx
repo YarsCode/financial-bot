@@ -9,10 +9,11 @@ interface ChatInputProps {
   isLoading?: boolean;
   options?: string[];
   inputType?: 'text' | 'number' | 'multiple';
+  disabled?: boolean;
 }
 
 export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
-  ({ onSend, isLoading, options, inputType = 'text' }, ref) => {
+  ({ onSend, isLoading, options, inputType = 'text', disabled = false }, ref) => {
     const [input, setInput] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -24,13 +25,15 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if (input.trim() && !isLoading) {
+      if (input.trim() && !isLoading && !disabled) {
         onSend(input.trim());
         setInput('');
       }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (disabled) return;
+      
       const value = e.target.value;
       
       // For number input, only allow numbers
@@ -52,8 +55,8 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
             {options.map((option, index) => (
               <button
                 key={option}
-                onClick={() => onSend(option)}
-                disabled={isLoading}
+                onClick={() => !disabled && onSend(option)}
+                disabled={isLoading || disabled}
                 className={cn(
                   "w-full p-4 text-right rounded-xl border-2 transition-all duration-200",
                   "bg-white hover:bg-blue-50 hover:border-blue-300 hover:shadow-md",
@@ -61,7 +64,7 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
                   "disabled:opacity-50 disabled:cursor-not-allowed",
                   "transform hover:scale-[1.02] active:scale-[0.98]",
                   "relative overflow-hidden group",
-                  "cursor-pointer"
+                  disabled ? "cursor-not-allowed" : "cursor-pointer"
                 )}
                 style={{
                   direction: 'rtl'
@@ -108,7 +111,7 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
               type={inputType === 'number' ? 'number' : 'text'}
               value={input}
               onChange={handleInputChange}
-              disabled={isLoading}
+              disabled={isLoading || disabled}
               placeholder={
                 inputType === 'number' 
                   ? 'הכנס מספר...' 
@@ -118,7 +121,8 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
                 "flex-1 transition-all duration-200",
                 "hover:border-blue-300 focus:border-blue-500",
                 "hover:shadow-sm focus:shadow-md",
-                "transform hover:scale-[1.01] focus:scale-[1.01]"
+                "transform hover:scale-[1.01] focus:scale-[1.01]",
+                disabled && "opacity-50 cursor-not-allowed"
               )}
               style={{
                 direction: 'rtl',
@@ -129,7 +133,7 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
             />
             <Button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !input.trim() || disabled}
               variant="default"
               className={cn(
                 "transition-all duration-200",

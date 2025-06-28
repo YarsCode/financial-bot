@@ -36,4 +36,22 @@ export interface FinancialData {
   savings: number;
   investments: number;
   debt: number;
+}
+
+export interface ChatRequest {
+  message: string;
+  threadId?: string;
+}
+
+export interface ChatResponse {
+  message: string;
+  threadId: string;
+}
+
+export interface FinancialProfileResponse {
+  profile: string;
+  explanation: string;
+  recommendations: string[];
+  reasoning: string;
+  threadId: string;
 } 

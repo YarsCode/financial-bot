@@ -9,11 +9,12 @@ interface ChatStore extends ChatState {
   clearMessages: () => void;
   setError: (error: string | null) => void;
   setIsLoading: (isLoading: boolean) => void;
+  sendMessage: (message: string) => Promise<void>;
 }
 
 export const useChat = create<ChatStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       messages: [],
       isLoading: false,
       error: null,
@@ -46,6 +47,44 @@ export const useChat = create<ChatStore>()(
       setError: (error: string | null) => set({ error }),
 
       setIsLoading: (isLoading: boolean) => set({ isLoading }),
+
+      sendMessage: async (message: string) => {
+        const { addMessage, setIsLoading, setError } = get();
+        
+        try {
+          setIsLoading(true);
+          setError(null);
+          
+          // Add user message to local state
+          addMessage(message, 'user');
+          
+          // Send message to assistant
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to send message');
+          }
+
+          const data = await response.json();
+          
+          // Add assistant response to local state
+          addMessage(data.message, 'assistant');
+        } catch (error) {
+          console.error('Error sending message:', error);
+          setError(error instanceof Error ? error.message : 'Failed to send message');
+        } finally {
+          setIsLoading(false);
+        }
+      },
     }),
     {
       name: LOCAL_STORAGE_KEYS.CHAT_HISTORY,

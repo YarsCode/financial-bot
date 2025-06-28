@@ -4,19 +4,21 @@ import { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ProgressBar } from '@/components/chat/ProgressBar';
-import { QUESTIONS, initializeQuestions } from '@/lib/constants';
-import { Answer, ChatMessage as ChatMessageType, Question } from '@/lib/types';
+import { QUESTIONS, initializeQuestions, QUESTIONS_ERROR } from '@/lib/constants';
+import { ChatMessage as ChatMessageType, Question } from '@/lib/types';
+import { QuestionAnswer } from '@/services/openai';
 
 export default function Home() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [questionsAndAnswers, setQuestionsAndAnswers] = useState<QuestionAnswer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingProfile, setIsGeneratingProfile] = useState(false);
   const [email, setEmail] = useState('');
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<{ focus: () => void }>(null);
@@ -24,19 +26,25 @@ export default function Home() {
   // Initialize questions from DOCX file
   useEffect(() => {
     const initQuestions = async () => {
-      await initializeQuestions();
-      setQuestions(QUESTIONS);
-      setIsInitialized(true);
-      
-      // Set initial messages after questions are loaded
-      if (QUESTIONS.length > 0) {
+      try {
+        await initializeQuestions();
+        setQuestions(QUESTIONS);
+        setIsInitialized(true);
+        setHasError(false);
+        if (QUESTIONS.length > 0) {
+          setMessages([
+            { type: 'bot', content: 'שלום! אני כאן כדי לעזור לך להבין את הפרופיל הפיננסי שלך. בוא נתחיל?' },
+            { type: 'bot', content: QUESTIONS[0].text }
+          ]);
+        }
+      } catch (e) {
+        setIsInitialized(true);
+        setHasError(true);
         setMessages([
-          { type: 'bot', content: 'שלום! אני כאן כדי לעזור לך להבין את הפרופיל הפיננסי שלך. בוא נתחיל?' },
-          { type: 'bot', content: QUESTIONS[0].text }
+          { type: 'error', content: QUESTIONS_ERROR || 'מצטערים, אירעה שגיאה בטעינת השאלות. אנא נסו שוב מאוחר יותר.' }
         ]);
       }
     };
-    
     initQuestions();
   }, []);
 
@@ -71,7 +79,16 @@ export default function Home() {
     
     setIsLoading(true);
     setMessages(prev => [...prev, { type: 'user', content: answer }]);
-    setAnswers(prev => [...prev, { questionId: currentQuestion + 1, answer }]);
+    
+    // Create the question-answer pair
+    const currentQuestionData = questions[currentQuestion];
+    const questionAnswer: QuestionAnswer = {
+      questionId: currentQuestion + 1,
+      question: currentQuestionData.text,
+      answer: answer
+    };
+    
+    setQuestionsAndAnswers(prev => [...prev, questionAnswer]);
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
@@ -88,7 +105,7 @@ export default function Home() {
         const res = await fetch('/api/financial-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ answers: [...answers, { questionId: currentQuestion + 1, answer }] }),
+          body: JSON.stringify({ questionsAndAnswers: [...questionsAndAnswers, questionAnswer] }),
         });
         const profile = await res.json();
         if (profile.error) throw new Error(profile.error);
@@ -118,14 +135,14 @@ export default function Home() {
     e.preventDefault();
     if (!email) return;
     // Here you would typically send the data to your webhook
-    console.log('Sending data to webhook:', { answers, email });
+    console.log('Sending data to webhook:', { questionsAndAnswers, email });
     setMessages(prev => [...prev, 
       { type: 'user', content: email },
       { type: 'bot', content: 'תודה! נציג שלנו יצור איתך קשר בהקדם.' }
     ]);
   };
 
-  if (!isInitialized || questions.length === 0) {
+  if (!isInitialized) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-24" dir="rtl">
         <div className="text-center">
@@ -140,7 +157,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-4 md:p-24" dir="rtl">
       <div className="w-full max-w-2xl">
-        <ProgressBar current={currentQuestion + 1} total={questions.length} />
+        {!hasError && <ProgressBar current={currentQuestion + 1} total={questions.length} />}
         
         <div
           className="mt-4 space-y-4 overflow-y-auto bg-white rounded-xl border border-gray-200 p-4"
@@ -186,6 +203,7 @@ export default function Home() {
               isLoading={isLoading}
               options={questions[currentQuestion]?.options}
               inputType={questions[currentQuestion]?.type}
+              disabled={hasError}
             />
           )}
           
@@ -199,6 +217,7 @@ export default function Home() {
             isLoading={isLoading}
             options={questions[currentQuestion]?.options}
             inputType={questions[currentQuestion]?.type}
+            disabled={hasError}
           />
         ) : showEmailInput ? (
           <form onSubmit={handleEmailSubmit} className="mt-4" dir="rtl">

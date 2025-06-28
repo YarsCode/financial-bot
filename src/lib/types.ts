@@ -13,7 +13,7 @@ export interface Answer {
 export type FinancialProfile = 'המתכנן' | 'המהמר' | 'המאוזן' | 'המחושב';
 
 export interface ChatMessage {
-  type: 'user' | 'bot';
+  type: 'user' | 'bot' | 'error';
   content: string;
 }
 

@@ -2,6 +2,7 @@ import { Question, FinancialProfile } from './types';
 
 // This will be populated dynamically from the API
 export let QUESTIONS: Question[] = [];
+export let QUESTIONS_ERROR: string | null = null;
 
 // Initialize questions from API
 export async function initializeQuestions(): Promise<void> {
@@ -12,73 +13,12 @@ export async function initializeQuestions(): Promise<void> {
     }
     const data = await response.json();
     QUESTIONS = data.questions;
+    QUESTIONS_ERROR = null;
   } catch (error) {
-    console.error('Failed to load questions from API, using defaults:', error);
-    // Fallback to default questions if API call fails
-    QUESTIONS = getDefaultQuestions();
+    console.error('Failed to load questions from API:', error);
+    QUESTIONS_ERROR = 'מצטערים, אירעה שגיאה בטעינת השאלות. אנא נסו שוב מאוחר יותר.';
+    throw error;
   }
-}
-
-function getDefaultQuestions(): Question[] {
-  return [
-    {
-      id: 1,
-      text: 'כמה כסף צברת?',
-      type: 'text'
-    },
-    {
-      id: 2,
-      text: 'כמה אתה חוסך כל חודש?',
-      type: 'text'
-    },
-    {
-      id: 3,
-      text: 'מהי מטרת השקעה?',
-      type: 'multiple',
-      options: ['דירה', 'פרישה מוקדמת', 'חיסכון', 'אחר']
-    },
-    {
-      id: 4,
-      text: 'מהי רמת הסיכון שאתה מוכן לקחת?',
-      type: 'multiple',
-      options: ['נמוכה', 'בינונית', 'גבוהה', 'גבוהה מאוד']
-    },
-    {
-      id: 5,
-      text: 'מהו אופק ההשקעה שלך?',
-      type: 'multiple',
-      options: ['קצר טווח (עד שנה)', 'בינוני (1-5 שנים)', 'ארוך טווח (מעל 5 שנים)']
-    },
-    {
-      id: 6,
-      text: 'האם יש לך חובות?',
-      type: 'multiple',
-      options: ['כן', 'לא']
-    },
-    {
-      id: 7,
-      text: 'מהי רמת ההכנסה החודשית שלך?',
-      type: 'text'
-    },
-    {
-      id: 8,
-      text: 'האם יש לך ביטוח חיים?',
-      type: 'multiple',
-      options: ['כן', 'לא']
-    },
-    {
-      id: 9,
-      text: 'מהי רמת הידע שלך בשוק ההון?',
-      type: 'multiple',
-      options: ['מתחיל', 'בינוני', 'מתקדם']
-    },
-    {
-      id: 10,
-      text: 'מהי המטרה הפיננסית העיקרית שלך?',
-      type: 'multiple',
-      options: ['ביטחון פיננסי', 'צבירת הון', 'הכנסה פסיבית', 'אחר']
-    }
-  ];
 }
 
 export const FINANCIAL_PROFILES: Record<FinancialProfile, string> = {

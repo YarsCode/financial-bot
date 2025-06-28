@@ -2,9 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: ['mammoth']
-  },
+  serverExternalPackages: ['mammoth'],
   images: {
     unoptimized: false,
     formats: ['image/webp', 'image/avif'],

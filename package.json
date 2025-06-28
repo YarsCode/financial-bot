@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "upload-files": "tsx scripts/upload-files.ts",
+    "test-assistant": "tsx scripts/test-simple.ts",
+    "create-assistant": "tsx scripts/create-assistant.ts",
+    "test-new-structure": "tsx scripts/test-new-structure.ts"
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
@@ -31,6 +35,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
+    "tsx": "^4.20.3",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5"
   }
