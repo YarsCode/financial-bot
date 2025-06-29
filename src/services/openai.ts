@@ -128,38 +128,47 @@ export type QuestionAnswer = {
 };
 
 export type AssistantResponse = {
-  profile: string;
-  explanation: string;
-  recommendations: string[];
-  reasoning: string;
+  profile: {
+    name: string;
+    confidence: number;
+    alternative_profiles: string;
+  };
+  analysis: {
+    key_insights: string;
+    risk_tolerance: 'נמוך' | 'בינוני' | 'גבוה';
+    investment_horizon: 'קצר' | 'בינוני' | 'ארוך טווח';
+    financial_goals: string;
+  };
+  explanation: {
+    profile_match: string;
+    practical_implications: string;
+    advantages: string;
+    considerations: string;
+  };
+  recommendations: {
+    immediate_actions: {
+      title: string;
+      description: string;
+      priority?: 'גבוה' | 'בינוני' | 'נמוך';
+      timeline: string;
+    };
+    long_term_strategy: {
+      title: string;
+      description: string;
+      timeline: string;
+    };
+    investment_approach: {
+      asset_allocation: string;
+      risk_management: string;
+      diversification: string;
+    };
+  };
+  reasoning: {
+    answer_analysis: string;
+    profile_comparison: string;
+    key_factors: string;
+  };
 };
-
-// Helper function to extract JSON from markdown code blocks
-function extractJsonFromMarkdown(text: string): string {
-  // Remove markdown code block markers
-  let cleanedText = text.trim();
-  
-  console.log('Extracting JSON from text:', cleanedText.substring(0, 100) + '...');
-  
-  // Remove ```json and ``` markers
-  if (cleanedText.startsWith('```json')) {
-    cleanedText = cleanedText.substring(7); // Remove ```json
-    console.log('Removed ```json prefix');
-  } else if (cleanedText.startsWith('```')) {
-    cleanedText = cleanedText.substring(3); // Remove ```
-    console.log('Removed ``` prefix');
-  }
-  
-  if (cleanedText.endsWith('```')) {
-    cleanedText = cleanedText.substring(0, cleanedText.length - 3); // Remove trailing ```
-    console.log('Removed trailing ```');
-  }
-  
-  const result = cleanedText.trim();
-  console.log('Extracted JSON:', result.substring(0, 100) + '...');
-  
-  return result;
-}
 
 // Main function to analyze financial profile with thread management
 export async function analyzeFinancialProfile(request: FinancialProfileRequest): Promise<AssistantResponse> {
@@ -259,21 +268,13 @@ ${questionsAndAnswersText}
     
     // Parse the JSON response
     try {
-      // Extract JSON from markdown code blocks if present
-      const cleanedResponseText = extractJsonFromMarkdown(responseText);
-      console.log('Cleaned response text:', cleanedResponseText);
-      
-      const response = JSON.parse(cleanedResponseText) as AssistantResponse;
+      const response = JSON.parse(responseText) as AssistantResponse;
       
       // Validate that all required fields are present
-      if (!response.profile || !response.explanation || !response.recommendations || !response.reasoning) {
+      if (!response.profile?.name || !response.explanation?.profile_match || 
+          !response.recommendations?.immediate_actions || !response.reasoning?.answer_analysis) {
         console.error('Response missing required fields:', response);
         throw new Error('Assistant response is missing required fields');
-      }
-      
-      if (!Array.isArray(response.recommendations)) {
-        console.error('Recommendations field is not an array:', response.recommendations);
-        throw new Error('Assistant response recommendations field is not an array');
       }
       
       console.log('Successfully parsed assistant response');
@@ -281,15 +282,9 @@ ${questionsAndAnswersText}
     } catch (parseError) {
       console.error('Failed to parse assistant response as JSON');
       console.error('Original response:', responseText);
-      console.error('Cleaned response:', extractJsonFromMarkdown(responseText));
       console.error('Parse error:', parseError);
       
-      // Provide more specific error messages
-      if (parseError instanceof SyntaxError) {
-        throw new Error(`Invalid JSON format in assistant response: ${parseError.message}`);
-      } else {
-        throw new Error('Invalid response format from assistant - expected valid JSON');
-      }
+      throw new Error('Invalid response format from assistant - expected valid JSON');
     }
 
   } catch (error) {
