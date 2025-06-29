@@ -131,10 +131,9 @@ export type AssistantResponse = {
   profile: {
     name: string;
     confidence: number;
-    alternative_profiles: string;
   };
   analysis: {
-    key_insights: string;
+    key_insights: string[] | string;
     risk_tolerance: 'נמוך' | 'בינוני' | 'גבוה';
     investment_horizon: 'קצר' | 'בינוני' | 'ארוך טווח';
     financial_goals: string;
@@ -142,8 +141,8 @@ export type AssistantResponse = {
   explanation: {
     profile_match: string;
     practical_implications: string;
-    advantages: string;
-    considerations: string;
+    advantages: string[] | string;
+    considerations: string[] | string;
   };
   recommendations: {
     immediate_actions: {
@@ -166,7 +165,7 @@ export type AssistantResponse = {
   reasoning: {
     answer_analysis: string;
     profile_comparison: string;
-    key_factors: string;
+    key_factors: string[] | string;
   };
 };
 
@@ -272,7 +271,7 @@ ${questionsAndAnswersText}
       
       // Validate that all required fields are present
       if (!response.profile?.name || !response.explanation?.profile_match || 
-          !response.recommendations?.immediate_actions || !response.reasoning?.answer_analysis) {
+          !response.recommendations?.immediate_actions?.title || !response.reasoning?.answer_analysis) {
         console.error('Response missing required fields:', response);
         throw new Error('Assistant response is missing required fields');
       }
