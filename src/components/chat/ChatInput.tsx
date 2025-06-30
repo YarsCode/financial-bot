@@ -8,7 +8,7 @@ interface ChatInputProps {
   onSend: (message: string) => void;
   isLoading?: boolean;
   options?: string[];
-  inputType?: 'text' | 'number' | 'multiple';
+  inputType?: 'text' | 'number' | 'sum' | 'multiple';
   disabled?: boolean;
 }
 
@@ -36,8 +36,8 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
       
       const value = e.target.value;
       
-      // For number input, only allow numbers
-      if (inputType === 'number') {
+      // For number and sum input, only allow numbers
+      if (inputType === 'number' || inputType === 'sum') {
         const numericValue = value.replace(/[^0-9]/g, '');
         setInput(numericValue);
       } else {
@@ -106,31 +106,46 @@ export const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
       <form onSubmit={handleSubmit} className="mt-4" dir="rtl">
         <Card className="p-4 hover:shadow-lg transition-shadow duration-200 border-2 hover:border-blue-300">
           <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              type={inputType === 'number' ? 'number' : 'text'}
-              value={input}
-              onChange={handleInputChange}
-              disabled={isLoading || disabled}
-              placeholder={
-                inputType === 'number' 
-                  ? 'הכנס מספר...' 
-                  : 'הקלד את תשובתך...'
-              }
-              className={cn(
-                "flex-1 transition-all duration-200",
-                "hover:border-blue-300 focus:border-blue-500",
-                "hover:shadow-sm focus:shadow-md",
-                "transform hover:scale-[1.01] focus:scale-[1.01]",
-                disabled && "opacity-50 cursor-not-allowed"
+            <div className="flex-1 relative">
+              <Input
+                ref={inputRef}
+                type={inputType === 'number' || inputType === 'sum' ? 'number' : 'text'}
+                value={input}
+                onChange={handleInputChange}
+                disabled={isLoading || disabled}
+                placeholder={
+                  inputType === 'number' 
+                    ? 'הכנס מספר...' 
+                    : inputType === 'sum'
+                    ? 'הכנס סכום...'
+                    : 'הקלד את תשובתך...'
+                }
+                className={cn(
+                  "transition-all duration-200",
+                  "hover:border-blue-300 focus:border-blue-500",
+                  "hover:shadow-sm focus:shadow-md",
+                  "transform hover:scale-[1.01] focus:scale-[1.01]",
+                  disabled && "opacity-50 cursor-not-allowed",
+                  inputType === 'sum' && "pr-12", // Add padding for the ₪ symbol
+                  // Hide number input arrows only for number/sum types
+                  (inputType === 'number' || inputType === 'sum') && "[appearance:textfield]",
+                  (inputType === 'number' || inputType === 'sum') && "[&::-webkit-outer-spin-button]:appearance-none",
+                  (inputType === 'number' || inputType === 'sum') && "[&::-webkit-inner-spin-button]:appearance-none"
+                )}
+                style={{
+                  direction: 'rtl',
+                  textAlign: 'right'
+                }}
+                min={inputType === 'number' || inputType === 'sum' ? 0 : undefined}
+                step={inputType === 'number' || inputType === 'sum' ? 1 : undefined}
+              />
+              {/* ₪ symbol for sum type */}
+              {inputType === 'sum' && (
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold text-lg">
+                  ₪
+                </div>
               )}
-              style={{
-                direction: 'rtl',
-                textAlign: 'right'
-              }}
-              min={inputType === 'number' ? 0 : undefined}
-              step={inputType === 'number' ? 1 : undefined}
-            />
+            </div>
             <Button
               type="submit"
               disabled={isLoading || !input.trim() || disabled}

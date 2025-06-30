@@ -27,11 +27,38 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div className="flex items-start justify-start">
         <div className="flex items-center bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-2 max-w-xs shadow-sm">
           <ErrorIcon />
-          <span className="text-sm font-medium mr-2">{message.content}</span>
+          <span className="text-sm font-medium mr-2">{message.content || 'שגיאה לא ידועה'}</span>
         </div>
       </div>
     );
   }
+
+  // Safety check for content
+  if (!message.content || typeof message.content !== 'string') {
+    return (
+      <div
+        className={cn(
+          'flex w-full',
+          message.type === 'user' ? 'justify-end' : 'justify-start'
+        )}
+        dir="rtl"
+      >
+        <Card
+          className={cn(
+            'max-w-[80%] p-4 transition-all duration-200',
+            message.type === 'user'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted border-2'
+          )}
+        >
+          <div className="text-sm md:text-base text-right leading-relaxed" dir="rtl">
+            תוכן לא זמין
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(

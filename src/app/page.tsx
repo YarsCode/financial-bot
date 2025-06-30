@@ -12,7 +12,7 @@ import { QuestionAnswer } from '@/services/openai';
 export default function Home() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionsAndAnswers, setQuestionsAndAnswers] = useState<QuestionAnswer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingProfile, setIsGeneratingProfile] = useState(false);
@@ -21,6 +21,8 @@ export default function Home() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [hasStartedQuestions, setHasStartedQuestions] = useState(false);
+  const [userProfile, setUserProfile] = useState<string>('');
+  const [showProfileMessage, setShowProfileMessage] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<{ focus: () => void }>(null);
@@ -72,10 +74,10 @@ export default function Home() {
   useEffect(() => {
     // Focus input after bot messages, but only if we're not showing options and questions have started
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.type === 'bot' && hasStartedQuestions && questions[currentQuestion]?.type !== 'multiple') {
+    if (lastMessage?.type === 'bot' && hasStartedQuestions && questions[currentQuestionIndex]?.type !== 'multiple') {
       chatInputRef.current?.focus();
     }
-  }, [messages, currentQuestion, questions, hasStartedQuestions]);
+  }, [messages, currentQuestionIndex, questions, hasStartedQuestions]);
 
   const handleStartQuestions = () => {
     setHasStartedQuestions(true);
@@ -85,6 +87,62 @@ export default function Home() {
     }, 1000);
   };
 
+  // Function to determine if we've completed all s1 questions
+  const hasCompletedS1Questions = (currentAnswers: QuestionAnswer[]) => {
+    const s1Questions = questions.filter(q => q.section === 's1');
+    const s1QuestionIds = s1Questions.map(q => q.id);
+    const answeredS1Questions = currentAnswers.filter(qa => 
+      s1QuestionIds.includes(questions[qa.questionId - 1]?.id || '')
+    );
+    return answeredS1Questions.length === s1Questions.length;
+  };
+
+  // Function to check if we've just completed the current s1 question
+  const hasJustCompletedCurrentS1Question = (currentAnswers: QuestionAnswer[], currentQuestionId: string) => {
+    const currentQuestion = questions.find(q => q.id === currentQuestionId);
+    if (!currentQuestion || currentQuestion.section !== 's1') return false;
+    
+    // Check if this is the last s1 question we've answered
+    const s1Questions = questions.filter(q => q.section === 's1');
+    const s1QuestionIds = s1Questions.map(q => q.id);
+    const answeredS1Questions = currentAnswers.filter(qa => 
+      s1QuestionIds.includes(questions[qa.questionId - 1]?.id || '')
+    );
+    
+    // If we've answered all s1 questions, we've just completed the current one
+    return answeredS1Questions.length === s1Questions.length;
+  };
+
+  // Function to get the next s2 question index
+  const getNextS2QuestionIndex = () => {
+    const s2Questions = questions.filter(q => q.section === 's2');
+    if (s2Questions.length === 0) return -1;
+    return questions.findIndex(q => q.id === s2Questions[0].id);
+  };
+
+  // Function to determine user profile from s1 answers
+  const determineUserProfile = async (s1Answers: QuestionAnswer[]) => {
+    setIsGeneratingProfile(true);
+    try {
+      const res = await fetch('/api/financial-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionsAndAnswers: s1Answers }),
+      });
+      const profile = await res.json();
+      if (profile.error) throw new Error(profile.error);
+      
+      setUserProfile(profile.profile.name);
+      return profile.profile.name;
+    } catch (error) {
+      console.error('Error determining profile:', error);
+      setUserProfile('המאוזן'); // Default fallback
+      return 'המאוזן';
+    } finally {
+      setIsGeneratingProfile(false);
+    }
+  };
+
   const handleAnswer = async (answer: string) => {
     if (!isInitialized || questions.length === 0 || !hasStartedQuestions) return;
     
@@ -92,54 +150,130 @@ export default function Home() {
     setMessages(prev => [...prev, { type: 'user', content: answer }]);
     
     // Create the question-answer pair
-    const currentQuestionData = questions[currentQuestion];
+    const currentQuestionData = questions[currentQuestionIndex];
     const questionAnswer: QuestionAnswer = {
-      questionId: currentQuestion + 1,
+      questionId: currentQuestionIndex + 1,
       question: currentQuestionData.text,
       answer: answer
     };
     
-    setQuestionsAndAnswers(prev => [...prev, questionAnswer]);
+    const updatedAnswers = [...questionsAndAnswers, questionAnswer];
+    setQuestionsAndAnswers(updatedAnswers);
 
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
+    // Check if current question is the last question
+    if (currentQuestionData.isLastQuestion) {
+      // This was the last question, generate profile immediately
+      generateProfile(updatedAnswers);
+      return;
+    }
+
+    // Check if we've completed all s1 questions and need to determine profile
+    if (currentQuestionData.section === 's1' && hasJustCompletedCurrentS1Question(updatedAnswers, currentQuestionData.id)) {
+      // We've completed s1, determine profile and show transition message
+      const profile = await determineUserProfile(updatedAnswers);
+      
+      const transitionMessage = `תודה ששיתפת אותי!
+בהתאם לכל מה שסיפרת לי יצאת המשקיע/ה ה"${profile}" ובהתאם לכך הגדרתי מה רמת הסיכון שמתאימה לך, כדי שנוכל לבנות את תיק ההשקעות נצטרך להגדיר לאן את/ה רוצה להגיע.`;
+      
+      setMessages(prev => [...prev, { type: 'bot', content: transitionMessage }]);
+      setShowProfileMessage(true);
+      
+      // Find the first s2 question
+      const nextS2Index = getNextS2QuestionIndex();
+      if (nextS2Index !== -1) {
+        setCurrentQuestionIndex(nextS2Index);
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            { type: 'bot', content: questions[nextS2Index].text }
+          ]);
+          setIsLoading(false);
+        }, 2000); // Give time for the transition message to be read
+      } else {
+        // No s2 questions, generate profile
+        generateProfile(updatedAnswers);
+      }
+      return;
+    }
+
+    // Determine next question index
+    let nextQuestionIndex = currentQuestionIndex + 1;
+
+    // Check if this is a multiple choice question with next_question logic
+    if (currentQuestionData.type === 'multiple' && currentQuestionData.options && currentQuestionData.nextQuestions) {
+      const answerIndex = currentQuestionData.options.indexOf(answer);
+      if (answerIndex !== -1) {
+        const nextQuestionId = currentQuestionData.nextQuestions[answerIndex];
+        
+        // If next_question has a value, find that question by its ID
+        if (nextQuestionId && nextQuestionId.trim() !== '') {
+          // Find the question with the matching ID
+          const targetQuestionIndex = questions.findIndex(q => q.id === nextQuestionId);
+          if (targetQuestionIndex !== -1) {
+            nextQuestionIndex = targetQuestionIndex;
+          }
+        }
+        // If next_question is empty, continue with default (nextQuestionIndex = currentQuestionIndex + 1)
+      }
+    }
+
+    // Check if the next question is marked as the last question
+    const nextQuestion = questions[nextQuestionIndex];
+    if (nextQuestion && nextQuestion.isLastQuestion) {
+      // This is the last question, so after this we'll generate the profile
+      setCurrentQuestionIndex(nextQuestionIndex);
       setTimeout(() => {
         setMessages(prev => [
           ...prev,
-          { type: 'bot', content: questions[currentQuestion + 1].text }
+          { type: 'bot', content: nextQuestion.text }
+        ]);
+        setIsLoading(false);
+      }, 1000);
+    } else if (nextQuestionIndex < questions.length) {
+      // Continue to next question
+      setCurrentQuestionIndex(nextQuestionIndex);
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          { type: 'bot', content: questions[nextQuestionIndex].text }
         ]);
         setIsLoading(false);
       }, 1000);
     } else {
-      setIsGeneratingProfile(true);
-      try {
-        const res = await fetch('/api/financial-profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionsAndAnswers: [...questionsAndAnswers, questionAnswer] }),
-        });
-        const profile = await res.json();
-        if (profile.error) throw new Error(profile.error);
-        const newMessages: ChatMessageType[] = [
-          { type: 'bot' as const, content: `הפרופיל הפיננסי שלך הוא: ${profile.profile.name}` },
-          { type: 'bot' as const, content: profile.explanation.profile_match },
-          { type: 'bot' as const, content: `המלצה מיידית:\n• ${profile.recommendations.immediate_actions.title}: ${profile.recommendations.immediate_actions.description}` },
-          { type: 'bot' as const, content: 'אנא הזן את כתובת המייל שלך כדי שנציג שלנו יוכל ליצור איתך קשר:' }
-        ];
-        setMessages(prev => [
-          ...prev,
-          ...newMessages.filter(msg => msg.content && msg.content.trim() !== '')
-        ]);
-        setShowEmailInput(true);
-      } catch {
-        setMessages(prev => [...prev, { 
-          type: 'bot', 
-          content: 'מצטערים, אירעה שגיאה. אנא נסו שוב מאוחר יותר.' 
-        }]);
-      }
-      setIsLoading(false);
-      setIsGeneratingProfile(false);
+      // No more questions, generate profile
+      generateProfile(updatedAnswers);
     }
+  };
+
+  const generateProfile = async (allAnswers: QuestionAnswer[]) => {
+    setIsGeneratingProfile(true);
+    try {
+      const res = await fetch('/api/financial-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionsAndAnswers: allAnswers }),
+      });
+      const profile = await res.json();
+      if (profile.error) throw new Error(profile.error);
+      const newMessages: ChatMessageType[] = [
+        { type: 'bot' as const, content: `הפרופיל הפיננסי שלך הוא: ${profile.profile.name}` },
+        { type: 'bot' as const, content: profile.explanation.profile_match },
+        { type: 'bot' as const, content: `המלצה מיידית:\n• ${profile.recommendations.immediate_actions.title}: ${profile.recommendations.immediate_actions.description}` },
+        { type: 'bot' as const, content: 'אנא הזן את כתובת המייל שלך כדי שנציג שלנו יוכל ליצור איתך קשר:' }
+      ];
+      setMessages(prev => [
+        ...prev,
+        ...newMessages.filter(msg => msg.content && msg.content.trim() !== '')
+      ]);
+      setShowEmailInput(true);
+    } catch {
+      setMessages(prev => [...prev, { 
+        type: 'bot', 
+        content: 'מצטערים, אירעה שגיאה. אנא נסו שוב מאוחר יותר.' 
+      }]);
+    }
+    setIsLoading(false);
+    setIsGeneratingProfile(false);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -168,7 +302,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-4 md:p-24" dir="rtl">
       <div className="w-full max-w-2xl">
-        {!hasError && hasStartedQuestions && <ProgressBar current={currentQuestion + 1} total={questions.length} />}
+        {!hasError && hasStartedQuestions && <ProgressBar current={currentQuestionIndex + 1} total={questions.length} />}
         
         <div
           className="mt-4 space-y-4 overflow-y-auto bg-white rounded-xl border border-gray-200 p-4"
@@ -220,14 +354,14 @@ export default function Home() {
           )}
           
           {/* Choices are now inside the chat container */}
-          {!showEmailInput && hasStartedQuestions && questions[currentQuestion]?.type === 'multiple' && 
-           messages.some(msg => msg.type === 'bot' && msg.content === questions[currentQuestion]?.text) && (
+          {!showEmailInput && hasStartedQuestions && questions[currentQuestionIndex]?.type === 'multiple' && 
+           messages.some(msg => msg.type === 'bot' && msg.content === questions[currentQuestionIndex]?.text) && (
             <ChatInput
               ref={chatInputRef}
               onSend={handleAnswer}
               isLoading={isLoading}
-              options={questions[currentQuestion]?.options}
-              inputType={questions[currentQuestion]?.type}
+              options={questions[currentQuestionIndex]?.options}
+              inputType={questions[currentQuestionIndex]?.type}
               disabled={hasError}
             />
           )}
@@ -235,13 +369,13 @@ export default function Home() {
           <div ref={messagesEndRef} />
         </div>
         
-        {!showEmailInput && hasStartedQuestions && questions[currentQuestion]?.type !== 'multiple' ? (
+        {!showEmailInput && hasStartedQuestions && questions[currentQuestionIndex]?.type !== 'multiple' ? (
           <ChatInput
             ref={chatInputRef}
             onSend={handleAnswer}
             isLoading={isLoading}
-            options={questions[currentQuestion]?.options}
-            inputType={questions[currentQuestion]?.type}
+            options={questions[currentQuestionIndex]?.options}
+            inputType={questions[currentQuestionIndex]?.type}
             disabled={hasError}
           />
         ) : showEmailInput ? (

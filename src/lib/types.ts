@@ -1,8 +1,11 @@
 export interface Question {
-  id: number;
+  id: string;
   text: string;
-  type: 'text' | 'number' | 'multiple';
+  type: 'text' | 'number' | 'sum' | 'multiple';
   options?: string[];
+  nextQuestions?: string[];
+  isLastQuestion?: boolean;
+  section?: string;
 }
 
 export interface Answer {
